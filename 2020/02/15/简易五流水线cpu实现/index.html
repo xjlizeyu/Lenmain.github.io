@@ -1,206 +1,165 @@
 <!DOCTYPE html>
-<html lang="en">
+<html  lang="en">
 <head>
-  <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
-<meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 4.2.0">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
-  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+    <meta charset="utf-8" />
 
-<link rel="stylesheet" href="/css/main.css">
+<meta name="generator" content="Hexo 4.2.0" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+<title>简易五流水线cpu实现 - Hexo</title>
 
 
-<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
-
-<script id="hexo-configurations">
-    var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Muse","version":"7.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
-  </script>
-
-  <meta name="description" content="流水线 cpu 的简易实现github项目地址 一、整体思路1. 流水线 cpu 流水线 cpu 中一个指令执行的五个周期如上图所示。为了解决流水线同步问题，设计 cpu 中级间寄存器由上升沿触发，周期内器件由下降沿触发。 上图为书上的流水线 cpu 基本数据通路，本次实验主要在此基础上进行改进，且添加冲突处理模块，在实验过程中，我也发现了该图中很多不足的地方。 2.mips 指令集mips 指令">
+    <meta name="description" content="流水线 cpu 的简易实现github项目地址 一、整体思路1. 流水线 cpu 流水线 cpu 中一个指令执行的五个周期如上图所示。为了解决流水线同步问题，设计 cpu 中级间寄存器由上升沿触发，周期内器件由下降沿触发。 上图为书上的流水线 cpu 基本数据通路，本次实验主要在此基础上进行改进，且添加冲突处理模块，在实验过程中，我也发现了该图中很多不足的地方。 2.mips 指令集mips 指令">
 <meta property="og:type" content="article">
 <meta property="og:title" content="简易五流水线cpu实现">
 <meta property="og:url" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="流水线 cpu 的简易实现github项目地址 一、整体思路1. 流水线 cpu 流水线 cpu 中一个指令执行的五个周期如上图所示。为了解决流水线同步问题，设计 cpu 中级间寄存器由上升沿触发，周期内器件由下降沿触发。 上图为书上的流水线 cpu 基本数据通路，本次实验主要在此基础上进行改进，且添加冲突处理模块，在实验过程中，我也发现了该图中很多不足的地方。 2.mips 指令集mips 指令">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-27-15-20-01.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-25-15-10-11.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-13-52-25.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-53-58.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-55-51.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-56-25.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-56-40.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-56-58.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-57-16.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-57-28.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-57-45.png">
-<meta property="og:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-28-20-58-04.png">
+<meta property="og:image" content="http://yoursite.com/images/og_image.png">
 <meta property="article:published_time" content="2020-02-14T23:57:08.000Z">
 <meta property="article:modified_time" content="2020-02-15T00:47:32.719Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/pic/2019-12-27-15-20-01.png">
-
-<link rel="canonical" href="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/">
-
-
-<script id="page-configurations">
-  // https://hexo.io/docs/variables.html
-  CONFIG.page = {
-    sidebar: "",
-    isHome: false,
-    isPost: true
-  };
-</script>
-
-  <title>简易五流水线cpu实现 | Hexo</title>
-  
+<meta name="twitter:image" content="http://yoursite.com/images/og_image.png">
 
 
 
 
 
 
-  <noscript>
-  <style>
-  .use-motion .brand,
-  .use-motion .menu-item,
-  .sidebar-inner,
-  .use-motion .post-block,
-  .use-motion .pagination,
-  .use-motion .comments,
-  .use-motion .post-header,
-  .use-motion .post-body,
-  .use-motion .collection-header { opacity: initial; }
 
-  .use-motion .site-title,
-  .use-motion .site-subtitle {
-    opacity: initial;
-    top: initial;
-  }
+<link rel="icon" href="/images/favicon.svg">
 
-  .use-motion .logo-line-before i { left: initial; }
-  .use-motion .logo-line-after i { right: initial; }
-  </style>
-</noscript>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.7.2/css/bulma.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:400,600|Source+Code+Pro">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css">
+
+
+    
+    
+<style>body>.footer,body>.navbar,body>.section{opacity:0}</style>
+
+    
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css">
+
+    
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/outdatedbrowser@1.1.5/outdatedbrowser/outdatedbrowser.min.css">
+
+    
+    
+    
+    
+<link rel="stylesheet" href="/css/back-to-top.css">
+
+    
+    
+    
+    
+    
+    
+    
+    <link rel="stylesheet" href="/css/progressbar.css">
+<script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+    
+    
+    
+
+
+<link rel="stylesheet" href="/css/style.css">
 </head>
-
-<body itemscope itemtype="http://schema.org/WebPage">
-  <div class="container use-motion">
-    <div class="headband"></div>
-
-    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
-      <div class="header-inner"><div class="site-brand-container">
-  <div class="site-nav-toggle">
-    <div class="toggle" aria-label="Toggle navigation bar">
-      <span class="toggle-line toggle-line-first"></span>
-      <span class="toggle-line toggle-line-middle"></span>
-      <span class="toggle-line toggle-line-last"></span>
-    </div>
-  </div>
-
-  <div class="site-meta">
-
-    <div>
-      <a href="/" class="brand" rel="start">
-        <span class="logo-line-before"><i></i></span>
-        <span class="site-title">Hexo</span>
-        <span class="logo-line-after"><i></i></span>
-      </a>
-    </div>
-  </div>
-
-  <div class="site-nav-right"></div>
-</div>
-
-
-<nav class="site-nav">
-  
-  <ul id="menu" class="menu">
-        <li class="menu-item menu-item-home">
-
-    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
-
-  </li>
-        <li class="menu-item menu-item-archives">
-
-    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
-
-  </li>
-  </ul>
-
-</nav>
-</div>
-    </header>
-
-    
-  <div class="back-to-top">
-    <i class="fa fa-arrow-up"></i>
-    <span>0%</span>
-  </div>
-
-
-    <main class="main">
-      <div class="main-inner">
-        <div class="content-wrap">
-          
-
-          <div class="content">
+<body class="is-3-column">
+    <nav class="navbar navbar-main">
+    <div class="container">
+        <div class="navbar-brand is-flex-center">
+            <a class="navbar-item navbar-logo" href="/">
             
-
-  <div class="posts-expand">
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="en">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Hexo">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          简易五流水线cpu实现
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2020-02-15 07:57:08 / Modified: 08:47:32" itemprop="dateCreated datePublished" datetime="2020-02-15T07:57:08+08:00">2020-02-15</time>
-            </span>
-
-          
-
+                <img src="/images/logo.svg" alt="简易五流水线cpu实现" height="28">
+            
+            </a>
         </div>
-      </header>
-
+        <div class="navbar-menu">
+            
+            <div class="navbar-start">
+                
+                <a class="navbar-item"
+                href="/">Home</a>
+                
+                <a class="navbar-item"
+                href="/archives">Archives</a>
+                
+                <a class="navbar-item"
+                href="/categories">Categories</a>
+                
+                <a class="navbar-item"
+                href="/tags">Tags</a>
+                
+                <a class="navbar-item"
+                href="/about">About</a>
+                
+            </div>
+            
+            <div class="navbar-end">
+                
+                    
+                    <a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                    
+                
+                
+                
+                <a class="navbar-item search" title="Search" href="javascript:;">
+                    <i class="fas fa-search"></i>
+                </a>
+                
+            </div>
+        </div>
+    </div>
+</nav>
     
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-8-tablet is-8-desktop is-6-widescreen has-order-2 column-main">
+<div class="card">
     
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-        <h2 id="流水线-cpu-的简易实现"><a href="#流水线-cpu-的简易实现" class="headerlink" title="流水线 cpu 的简易实现"></a>流水线 cpu 的简易实现</h2><p><a href="https://github.com/xjlizeyu/pipelined-CPU" target="_blank" rel="noopener">github项目地址</a></p>
+    <div class="card-content article ">
+        
+        <div class="level article-meta is-size-7 is-uppercase is-mobile is-overflow-x-auto">
+            <div class="level-left">
+                <time class="level-item has-text-grey" datetime="2020-02-14T23:57:08.000Z">2020-02-15</time>
+                
+                
+                <span class="level-item has-text-grey">
+                    
+                    
+                    30 minutes read (About 4530 words)
+                </span>
+                
+                
+            </div>
+        </div>
+        
+        <h1 class="title is-size-3 is-size-4-mobile has-text-weight-normal">
+            
+                简易五流水线cpu实现
+            
+        </h1>
+        <div class="content">
+            <h2 id="流水线-cpu-的简易实现"><a href="#流水线-cpu-的简易实现" class="headerlink" title="流水线 cpu 的简易实现"></a>流水线 cpu 的简易实现</h2><p><a href="https://github.com/xjlizeyu/pipelined-CPU">github项目地址</a></p>
 <h3 id="一、整体思路"><a href="#一、整体思路" class="headerlink" title="一、整体思路"></a>一、整体思路</h3><h4 id="1-流水线-cpu"><a href="#1-流水线-cpu" class="headerlink" title="1. 流水线 cpu"></a>1. 流水线 cpu</h4><p><img src="./pic/2019-12-27-15-20-01.png" alt=""></p>
 <p>流水线 cpu 中一个指令执行的五个周期如上图所示。<br>为了解决流水线同步问题，设计 cpu 中级间寄存器由上升沿触发，周期内器件由下降沿触发。<br><img src="./pic/2019-12-25-15-10-11.png" alt=""></p>
 <p>上图为书上的流水线 cpu 基本数据通路，本次实验主要在此基础上进行改进，且添加冲突处理模块，在实验过程中，我也发现了该图中很多不足的地方。</p>
-<h4 id="2-mips-指令集"><a href="#2-mips-指令集" class="headerlink" title="2.mips 指令集"></a>2.mips 指令集</h4><p><img src="./pic/2019-12-28-13-52-25.png" alt=""><br>mips 指令分为 R 型，I 型和 J 型，其中 R 型有三个操作数，I 型携带立即数，J 型为跳转指令。<br><a href="https://blog.csdn.net/qq_41848006/article/details/82256626" target="_blank" rel="noopener">MIPS 指令</a></p>
+<h4 id="2-mips-指令集"><a href="#2-mips-指令集" class="headerlink" title="2.mips 指令集"></a>2.mips 指令集</h4><p><img src="./pic/2019-12-28-13-52-25.png" alt=""><br>mips 指令分为 R 型，I 型和 J 型，其中 R 型有三个操作数，I 型携带立即数，J 型为跳转指令。<br><a href="https://blog.csdn.net/qq_41848006/article/details/82256626">MIPS 指令</a></p>
 <h4 id="3-冲突管理"><a href="#3-冲突管理" class="headerlink" title="3. 冲突管理"></a>3. 冲突管理</h4><p>冲突管理是流水线 cpu 不得不面对的一个问题，解决方法主要为插入气泡来阻塞指令运行，已经增加新的数据回路使前指令的结果尽快回送到寄存器中。本次实验主要采取的是气泡插入法，结构较为简单但是降低了效率。</p>
 <p>cpu 的冲突主要分为三种，结构冲突，数据冲突和控制冲突。结构冲突通过流水线 cpu 的结构设计可以避免，数据冲突主要是相距较近的指令所需数据地址相同产生的时间冲突，控制冲突主要针对跳转指令，本次实验中的冲突检测模块维护了一个队列用来检测冲突，从而解决数据冲突，对于控制冲突，由于数据通路问题无法较早回送，只能插入气泡。</p>
 <h3 id="二、组成模块"><a href="#二、组成模块" class="headerlink" title="二、组成模块"></a>二、组成模块</h3><h4 id="1-存储器"><a href="#1-存储器" class="headerlink" title="1. 存储器"></a>1. 存储器</h4><blockquote>
@@ -275,185 +234,612 @@
 <h4 id="4-波形效果"><a href="#4-波形效果" class="headerlink" title="4. 波形效果"></a>4. 波形效果</h4><p><img src="./pic/2019-12-28-20-55-51.png" alt=""><br><img src="./pic/2019-12-28-20-56-25.png" alt=""><br><img src="./pic/2019-12-28-20-56-40.png" alt=""><br><img src="./pic/2019-12-28-20-56-58.png" alt=""><br><img src="./pic/2019-12-28-20-57-16.png" alt=""><br><img src="./pic/2019-12-28-20-57-28.png" alt=""><br><img src="./pic/2019-12-28-20-57-45.png" alt=""><br><img src="./pic/2019-12-28-20-58-04.png" alt=""></p>
 <h3 id="五、改进方案"><a href="#五、改进方案" class="headerlink" title="五、改进方案"></a>五、改进方案</h3><p>本次实验中为了解决数据冲突和控制冲突，主要采用了插入气泡的后退法，但是尽管后退法的结构简单，不会引入较为复杂的连线和结构，但浪费了较多的 cpu 周期，削弱了<br>流水线 cpu 相较于其他 cpu 效率更高的优点。为了保证指令执行的效率，可以使用专用的数据通路提前回送数据从而取代气泡的插入。同时，对于控制冒险，可以将 J 指令在 FI<br>周期内完成，BEQ 指令在 FI 和 ID 周期内完成，可以实现 J 指令不插入气泡，BEQ 指令只插入一个气泡，但要实现这一结构，本次实验会对级间寄存器结构有较大的改动，因此没有实现。</p>
 
-    </div>
-
-    
-    
-    
-
-      <footer class="post-footer">
-
+        </div>
         
-
-
         
-    <div class="post-nav">
-      <div class="post-nav-item">
-    <a href="/2020/02/14/hello-world/" rel="prev" title="Hello World">
-      <i class="fa fa-chevron-left"></i> Hello World
-    </a></div>
-      <div class="post-nav-item"></div>
+        
     </div>
-      </footer>
+</div>
+
+
+
+<div class="card">
+    <div class="card-content">
+        <h3 class="menu-label has-text-centered">Like this article? Support the author with</h3>
+        <div class="buttons is-centered">
+            
+                
+<div class="notification is-danger">
+    You forgot to set the <code>qrcode</code> for Alipay. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                
+<div class="notification is-danger">
+    You forgot to set the <code>qrcode</code> for Wechat. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                <!-- Visit https://www.paypal.com/donate/buttons/ to get your donate button -->
+
+<div class="notification is-danger">
+    You forgot to set the <code>business</code> and <code>currency_code</code> for Paypal. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                
+<div class="notification is-danger">
+    You forgot to set the <code>url</code> Patreon. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+        </div>
+    </div>
+</div>
+
+
+
+<div class="card card-transparent">
+    <div class="level post-navigation is-flex-wrap is-mobile">
+        
+        
+        <div class="level-end">
+            <a class="level level-item has-link-grey  article-nav-next" href="/2020/02/14/hello-world/">
+                <span class="level-item">Hello World</span>
+                <i class="level-item fas fa-chevron-right"></i>
+            </a>
+        </div>
+        
+    </div>
+</div>
+
+
+</div>
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen  has-order-1 column-left ">
     
-  </article>
-  
-  
-  
+        
+<div class="card widget">
+    <div class="card-content">
+        <nav class="level">
+            <div class="level-item has-text-centered" style="flex-shrink: 1">
+                <div>
+                    
+                    <figure class="image is-128x128 has-mb-6">
+                        <img class="" src="/images/avatar.png" alt="Your name">
+                    </figure>
+                    
+                    <p class="is-size-4 is-block">
+                        Your name
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-block">
+                        Your title
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-flex is-flex-center has-text-grey">
+                        <i class="fas fa-map-marker-alt has-mr-7"></i>
+                        <span>Your location</span>
+                    </p>
+                    
+                </div>
+            </div>
+        </nav>
+        <nav class="level is-mobile">
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        Posts
+                    </p>
+                    <a href="/archives">
+                        <p class="title has-text-weight-normal">
+                            2
+                        </p>
+                    </a>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        Categories
+                    </p>
+                    <a href="/categories">
+                        <p class="title has-text-weight-normal">
+                            0
+                        </p>
+                    </a>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        Tags
+                    </p>
+                    <a href="/tags">
+                        <p class="title has-text-weight-normal">
+                            0
+                        </p>
+                    </a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="level">
+            <a class="level-item button is-link is-rounded" href="https://github.com/ppoffice" target="_blank" rel="noopener">
+                Follow</a>
+        </div>
+        
+        
+        
+        <div class="level is-mobile">
+            
+            <a class="level-item button is-white is-marginless" target="_blank" rel="noopener"
+                title="Github" href="https://github.com/ppoffice">
+                
+                <i class="fab fa-github"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank" rel="noopener"
+                title="Facebook" href="https://facebook.com">
+                
+                <i class="fab fa-facebook"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank" rel="noopener"
+                title="Twitter" href="https://twitter.com">
+                
+                <i class="fab fa-twitter"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank" rel="noopener"
+                title="Dribbble" href="https://dribbble.com">
+                
+                <i class="fab fa-dribbble"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank" rel="noopener"
+                title="RSS" href="/">
+                
+                <i class="fas fa-rss"></i>
+                
+            </a>
+            
+        </div>
+        
+    </div>
+</div>
+    
+        
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            Links
+        </h3>
+        <ul class="menu-list">
+        
+            <li>
+                <a class="level is-mobile" href="https://hexo.io" target="_blank" rel="noopener">
+                    <span class="level-left">
+                        <span class="level-item">Hexo</span>
+                    </span>
+                    <span class="level-right">
+                        <span class="level-item tag">hexo.io</span>
+                    </span>
+                </a>
+            </li>
+        
+            <li>
+                <a class="level is-mobile" href="https://github.com/ppoffice" target="_blank" rel="noopener">
+                    <span class="level-left">
+                        <span class="level-item">PPOffice</span>
+                    </span>
+                    <span class="level-right">
+                        <span class="level-item tag">github.com</span>
+                    </span>
+                </a>
+            </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
 
-  </div>
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                Categories
+            </h3>
+            <ul class="menu-list">
+            
+            </ul>
+        </div>
+    </div>
+</div>
+    
+        
+    
+    
+        <div class="column-right-shadow is-hidden-widescreen ">
+        
+            <div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            Recent
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/thumbnail.svg" alt="简易五流水线cpu实现">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-14T23:57:08.000Z">2020-02-15</time></div>
+                    <a href="/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/" class="title has-link-black-ter is-size-6 has-text-weight-normal">简易五流水线cpu实现</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/2020/02/14/hello-world/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/thumbnail.svg" alt="Hello World">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-14T11:26:00.268Z">2020-02-14</time></div>
+                    <a href="/2020/02/14/hello-world/" class="title has-link-black-ter is-size-6 has-text-weight-normal">Hello World</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            Archives
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/02/">
+                <span class="level-start">
+                    <span class="level-item">February 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                Tags
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+            </div>
+        </div>
+    </div>
+</div>
+        
+        </div>
+    
+</div>
+
+                
 
 
-          </div>
-          
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen is-hidden-touch is-hidden-desktop-only has-order-3 column-right ">
+    
+        <div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            Recent
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/thumbnail.svg" alt="简易五流水线cpu实现">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-14T23:57:08.000Z">2020-02-15</time></div>
+                    <a href="/2020/02/15/%E7%AE%80%E6%98%93%E4%BA%94%E6%B5%81%E6%B0%B4%E7%BA%BFcpu%E5%AE%9E%E7%8E%B0/" class="title has-link-black-ter is-size-6 has-text-weight-normal">简易五流水线cpu实现</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/2020/02/14/hello-world/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/thumbnail.svg" alt="Hello World">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-14T11:26:00.268Z">2020-02-14</time></div>
+                    <a href="/2020/02/14/hello-world/" class="title has-link-black-ter is-size-6 has-text-weight-normal">Hello World</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            Archives
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/02/">
+                <span class="level-start">
+                    <span class="level-item">February 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                Tags
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+            </div>
+        </div>
+    </div>
+</div>
+    
+    
+</div>
+
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+    <div class="container">
+        <div class="level">
+            <div class="level-start has-text-centered-mobile">
+                <a class="footer-logo is-block has-mb-6" href="/">
+                
+                    <img src="/images/logo.svg" alt="简易五流水线cpu实现" height="28">
+                
+                </a>
+                <p class="is-size-7">
+                &copy; 2020 John Doe&nbsp;
+                Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> & <a
+                        href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a>
+                
+                </p>
+            </div>
+            <div class="level-end">
+            
+                <div class="field has-addons is-flex-center-mobile has-mt-5-mobile is-flex-wrap is-flex-middle">
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/">
+                        
+                        <i class="fab fa-creative-commons"></i>
+                        
+                    </a>
+                </p>
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/">
+                        
+                        <i class="fab fa-creative-commons-by"></i>
+                        
+                    </a>
+                </p>
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                </p>
+                
+                </div>
+            
+            </div>
+        </div>
+    </div>
+</footer>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script>
+<script>moment.locale("en");</script>
+
 
 <script>
-  window.addEventListener('tabs:register', () => {
-    let activeClass = CONFIG.comments.activeClass;
-    if (CONFIG.comments.storage) {
-      activeClass = localStorage.getItem('comments_active') || activeClass;
+var IcarusThemeSettings = {
+    site: {
+        url: 'http://yoursite.com',
+        external_link: {"enable":true,"exclude":[]}
+    },
+    article: {
+        highlight: {
+            clipboard: true,
+            fold: 'unfolded'
+        }
     }
-    if (activeClass) {
-      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
-      if (activeTab) {
-        activeTab.click();
-      }
-    }
-  });
-  if (CONFIG.comments.storage) {
-    window.addEventListener('tabs:click', event => {
-      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
-      let commentClass = event.target.classList[1];
-      localStorage.setItem('comments_active', commentClass);
-    });
-  }
+};
 </script>
 
+
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script>
+
+
+
+
+
+<script src="/js/animation.js"></script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script>
+<script src="/js/gallery.js" defer></script>
+
+
+
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update
+            my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/outdatedbrowser@1.1.5/outdatedbrowser/outdatedbrowser.min.js" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        });
+    });
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@2.7.5/unpacked/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    MathJax.Hub.Config({
+        'HTML-CSS': {
+            matchFontHeight: false
+        },
+        SVG: {
+            matchFontHeight: false
+        },
+        CommonHTML: {
+            matchFontHeight: false
+        },
+        tex2jax: {
+            inlineMath: [
+                ['$','$'],
+                ['\\(','\\)']
+            ]
+        }
+    });
+});
+</script>
+
+
+<a id="back-to-top" title="Back to Top" href="javascript:;">
+    <i class="fas fa-chevron-up"></i>
+</a>
+<script src="/js/back-to-top.js" defer></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.js" defer></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
         </div>
-          
-  
-  <div class="toggle sidebar-toggle">
-    <span class="toggle-line toggle-line-first"></span>
-    <span class="toggle-line toggle-line-middle"></span>
-    <span class="toggle-line toggle-line-last"></span>
-  </div>
-
-  <aside class="sidebar">
-    <div class="sidebar-inner">
-
-      <ul class="sidebar-nav motion-element">
-        <li class="sidebar-nav-toc">
-          Table of Contents
-        </li>
-        <li class="sidebar-nav-overview">
-          Overview
-        </li>
-      </ul>
-
-      <!--noindex-->
-      <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#流水线-cpu-的简易实现"><span class="nav-number">1.</span> <span class="nav-text">流水线 cpu 的简易实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、整体思路"><span class="nav-number">1.1.</span> <span class="nav-text">一、整体思路</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-流水线-cpu"><span class="nav-number">1.1.1.</span> <span class="nav-text">1. 流水线 cpu</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-mips-指令集"><span class="nav-number">1.1.2.</span> <span class="nav-text">2.mips 指令集</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-冲突管理"><span class="nav-number">1.1.3.</span> <span class="nav-text">3. 冲突管理</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、组成模块"><span class="nav-number">1.2.</span> <span class="nav-text">二、组成模块</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-存储器"><span class="nav-number">1.2.1.</span> <span class="nav-text">1. 存储器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-级间寄存器"><span class="nav-number">1.2.2.</span> <span class="nav-text">2. 级间寄存器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-控制模块"><span class="nav-number">1.2.3.</span> <span class="nav-text">3. 控制模块</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-运算器及运算控制器"><span class="nav-number">1.2.4.</span> <span class="nav-text">4. 运算器及运算控制器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-程序计数器"><span class="nav-number">1.2.5.</span> <span class="nav-text">5. 程序计数器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#6-冲突检测模块"><span class="nav-number">1.2.6.</span> <span class="nav-text">6. 冲突检测模块</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#7-寄存器组模块"><span class="nav-number">1.2.7.</span> <span class="nav-text">7. 寄存器组模块</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#8-其他逻辑模块"><span class="nav-number">1.2.8.</span> <span class="nav-text">8. 其他逻辑模块</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#9-cpu-顶层模块"><span class="nav-number">1.2.9.</span> <span class="nav-text">9.cpu 顶层模块</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#三、测试方法和工具"><span class="nav-number">1.3.</span> <span class="nav-text">三、测试方法和工具</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-汇编器"><span class="nav-number">1.3.1.</span> <span class="nav-text">1. 汇编器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-存储器初始化"><span class="nav-number">1.3.2.</span> <span class="nav-text">2. 存储器初始化</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四、测试结果"><span class="nav-number">1.4.</span> <span class="nav-text">四、测试结果</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-测试指令"><span class="nav-number">1.4.1.</span> <span class="nav-text">1. 测试指令</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-vivado-模拟"><span class="nav-number">1.4.2.</span> <span class="nav-text">2.vivado 模拟</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-测试模块"><span class="nav-number">1.4.3.</span> <span class="nav-text">3. 测试模块</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-波形效果"><span class="nav-number">1.4.4.</span> <span class="nav-text">4. 波形效果</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#五、改进方案"><span class="nav-number">1.5.</span> <span class="nav-text">五、改进方案</span></a></li></ol></li></ol></div>
-      </div>
-      <!--/noindex-->
-
-      <div class="site-overview-wrap sidebar-panel">
-        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-  <p class="site-author-name" itemprop="name">John Doe</p>
-  <div class="site-description" itemprop="description"></div>
-</div>
-<div class="site-state-wrap motion-element">
-  <nav class="site-state">
-      <div class="site-state-item site-state-posts">
-          <a href="/archives/">
-        
-          <span class="site-state-item-count">2</span>
-          <span class="site-state-item-name">posts</span>
-        </a>
-      </div>
-  </nav>
-</div>
-
-
-
-      </div>
-
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
     </div>
-  </aside>
-  <div id="sidebar-dimmer"></div>
-
-
-      </div>
-    </main>
-
-    <footer class="footer">
-      <div class="footer-inner">
-        
-
-<div class="copyright">
-  
-  &copy; 
-  <span itemprop="copyrightYear">2020</span>
-  <span class="with-love">
-    <i class="fa fa-user"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">John Doe</span>
 </div>
-  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> v4.2.0
-  </div>
-  <span class="post-meta-divider">|</span>
-  <div class="theme-info">Theme – <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.7.1
-  </div>
-
-        
-
-
-
-
-
-
-
-
-      </div>
-    </footer>
-  </div>
-
-  
-  <script src="/lib/anime.min.js"></script>
-  <script src="/lib/velocity/velocity.min.js"></script>
-  <script src="/lib/velocity/velocity.ui.min.js"></script>
-
-<script src="/js/utils.js"></script>
-
-<script src="/js/motion.js"></script>
-
-
-<script src="/js/schemes/muse.js"></script>
-
-
-<script src="/js/next-boot.js"></script>
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  
-
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js" defer></script>
+<link rel="stylesheet" href="/css/search.css">
+<link rel="stylesheet" href="/css/insight.css">
+    
 </body>
 </html>
